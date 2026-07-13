@@ -1,3 +1,10 @@
+import * as dotenv from 'dotenv';
+import * as fs from 'fs';
+
+if (fs.existsSync('.env.local')) {
+  dotenv.config({ path: '.env.local' });
+}
+
 import { db } from '../index';
 import { claims } from '../schema/claims.sql';
 import { claimAuditLog } from '../schema/audit.sql';
