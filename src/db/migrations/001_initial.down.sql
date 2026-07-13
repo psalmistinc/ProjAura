@@ -1,0 +1,19 @@
+DROP TABLE IF EXISTS reports;
+DROP TABLE IF EXISTS stations;
+DROP TABLE IF EXISTS fuel_prices;
+DROP TABLE IF EXISTS settlements;
+DROP TABLE IF EXISTS bids;
+DROP TABLE IF EXISTS marketplace_assets;
+DROP TABLE IF EXISTS claim_audit_log;
+DROP TABLE IF EXISTS claims;
+
+DROP TYPE IF EXISTS report_status;
+DROP TYPE IF EXISTS complaint_type;
+DROP TYPE IF EXISTS fuel_marking_status;
+DROP TYPE IF EXISTS station_license_status;
+DROP TYPE IF EXISTS settlement_status;
+DROP TYPE IF EXISTS bid_status;
+DROP TYPE IF EXISTS asset_status;
+DROP TYPE IF EXISTS fuel_type;
+DROP TYPE IF EXISTS claim_type;
+DROP TYPE IF EXISTS claim_status;

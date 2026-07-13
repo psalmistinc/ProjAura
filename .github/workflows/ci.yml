@@ -1,0 +1,131 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  type-check:
+    name: Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run type-check
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run test -- --coverage
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    needs: [type-check, lint, unit-tests]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+
+  bundle-size:
+    name: Bundle Size Check
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: Check bundle size
+        run: |
+          SIZE=$(du -sk .next/static | cut -f1)
+          echo "Bundle size: ${SIZE}KB"
+          if [ "$SIZE" -gt 5120 ]; then
+            echo "ERROR: Bundle size exceeds 5MB budget"
+            exit 1
+          fi
+
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: build
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: aura_test
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://test:test@localhost:5432/aura_test
+      REDIS_URL: redis://localhost:6379
+      NEXTAUTH_SECRET: test-secret-key-at-least-32-characters-long
+      NEXTAUTH_URL: http://localhost:3000
+      NPA_API_BASE_URL: https://api.npa.gov.gh/v1
+      NPA_API_KEY: test-npa-key
+      NPA_WEBHOOK_SECRET: test-npa-webhook
+      RTGS_API_BASE_URL: https://rtgs.bog.gov.gh/v1
+      RTGS_API_KEY: test-rtgs-key
+      FABRIC_CHANNEL_NAME: UPPF_Claims
+      FABRIC_CHAINCODE_NAME: claims
+      FABRIC_MSP_ID: AuraMSP
+      FABRIC_PEER_ENDPOINT: localhost:7051
+      FABRIC_CA_ENDPOINT: localhost:7054
+      APP_ENV: development
+      ENABLE_MOCKS: "true"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run test -- --reporter=verbose
