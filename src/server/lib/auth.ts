@@ -1,9 +1,8 @@
 import NextAuth from 'next-auth';
 import type { NextAuthConfig } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
-import { getServerSession } from 'next-auth';
 
-export const authOptions: NextAuthConfig = {
+const authOptions: NextAuthConfig = {
   providers: [
     CredentialsProvider({
       name: 'credentials',
@@ -60,6 +59,4 @@ export const authOptions: NextAuthConfig = {
   secret: process.env.NEXTAUTH_SECRET,
 };
 
-export async function auth() {
-  return await getServerSession(authOptions);
-}
+export const { auth, signIn, signOut, handlers } = NextAuth(authOptions);
