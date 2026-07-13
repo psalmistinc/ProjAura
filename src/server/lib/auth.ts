@@ -1,6 +1,7 @@
 import NextAuth from 'next-auth';
 import type { NextAuthConfig } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
+import { getServerSession } from 'next-auth';
 
 export const authOptions: NextAuthConfig = {
   providers: [
@@ -60,14 +61,5 @@ export const authOptions: NextAuthConfig = {
 };
 
 export async function auth() {
-  // Placeholder — in production, use NextAuth's getServerSession
-  return {
-    user: {
-      id: 'usr-001',
-      email: 'admin@aura.gov.gh',
-      name: 'Aura Admin',
-      role: 'ADMIN',
-      orgId: 'org-001',
-    },
-  };
+  return await getServerSession(authOptions);
 }

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { getToken } from 'next-auth/jwt';
 
 const RATE_LIMIT_STORE = new Map<string, { count: number; resetAt: number }>();
 
@@ -26,7 +27,12 @@ function checkRateLimit(key: string, maxRequests: number, windowMs: number): { a
   return { allowed: true, remaining: maxRequests - entry.count };
 }
 
-export function middleware(request: NextRequest) {
+// Public routes that don't require authentication
+const publicRoutes = ['/', '/login', '/shared'];
+const publicApiRoutes = ['/api/auth', '/api/v1/reports/share'];
+const publicStaticRoutes = ['/_next', '/favicon.ico'];
+
+export async function middleware(request: NextRequest) {
   const { pathname } = new URL(request.url);
 
   // Security headers
@@ -35,6 +41,41 @@ export function middleware(request: NextRequest) {
   response.headers.set('X-Content-Type-Options', 'nosniff');
   response.headers.set('X-XSS-Protection', '1; mode=block');
   response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+
+  // Check if route is public
+  const isPublicRoute = publicRoutes.some(route => 
+    route === '/' ? pathname === '/' : pathname.startsWith(route)
+  );
+  const isPublicApi = publicApiRoutes.some(route => pathname.startsWith(route));
+  const isStatic = publicStaticRoutes.some(route => pathname.startsWith(route));
+  const isLoginPage = pathname === '/login';
+
+  // Skip auth check for public routes, API auth, and static files
+  if (!isPublicRoute && !isPublicApi && !isStatic) {
+    // Check for session token
+    const token = await getToken({ 
+      req: request, 
+      secret: process.env.NEXTAUTH_SECRET 
+    });
+
+    // If no token, redirect to login
+    if (!token) {
+      const loginUrl = new URL('/login', request.url);
+      loginUrl.searchParams.set('callbackUrl', pathname);
+      return NextResponse.redirect(loginUrl);
+    }
+  }
+
+  // If logged in user visits login page, redirect to dashboard
+  if (isLoginPage) {
+    const token = await getToken({ 
+      req: request, 
+      secret: process.env.NEXTAUTH_SECRET 
+    });
+    if (token) {
+      return NextResponse.redirect(new URL('/dashboard', request.url));
+    }
+  }
 
   // CORS for API routes
   if (pathname.startsWith('/api/')) {
